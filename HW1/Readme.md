@@ -2,6 +2,7 @@
 Я запускаю его с помощью команды
 docker exec -it hadoop-master bash -lc "bash /opt/hadoop/run_hw.sh"
 
+Первые 3 выполняются подряд и довольно быстро.
 
 Задача №4 - проверка что все выполнилось:
 docker exec -it hadoop-master bash -lc 'hdfs dfs -cat /tmp/wordcount_shadow/part-r-00000 | sed -n "1,200p"'
@@ -19,3 +20,9 @@ examples;       1
 love    1
 loves   1
 small   2
+
+Задание №5
+
+Считывает результат и выводит количество слов Innsmouth
+
+Вывод: 3
