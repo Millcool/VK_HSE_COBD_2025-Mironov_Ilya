@@ -1,0 +1,3 @@
+export HADOOP_OPTS="$HADOOP_OPTS -Djdk.module.illegalAccess=permit --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
+
+export HIVE_OPTS="$HIVE_OPTS -Djdk.module.illegalAccess=permit --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
