@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 export HADOOP_HOME=/opt/hadoop
 export HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
 export PATH="$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin"
@@ -48,12 +48,18 @@ hdfs dfs -chmod -R 771 /user/hive/warehouse || true
 schematool -dbType derby -initSchema -verbose || true
 
 nohup hive --service metastore -p 9083 >/opt/hive/log.metastore 2>&1 &
+sleep 5
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export HIVE_HOME=/opt/hive
+export HADOOP_HOME=/opt/hadoop
 nohup hiveserver2 --hiveconf hive.metastore.uris=thrift://localhost:9083 >/opt/hive/log.hiveserver2 2>&1 &
 
 echo "Hive started: Metastore 9083, HiveServer2 10000 (JDBC)"
+echo "Note: HiveServer2 may take 30-60 seconds to fully start"
 
 
 # Пути для удобного доступа наружу, чтоб скопировать их
 echo "Hadoop started. HDFS: hdfs://master:8020 | YARN: master:8032"
 
 exec bash -lc "while true; do sleep 3600; done"
+

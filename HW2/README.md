@@ -1,24 +1,49 @@
-Красивое оформление с гпт
-# Домашняя работа №2 — Hadoop + Hive: Анализ движения цен акций
+# Домашняя работа №2 — Построение аналитической витрины в Hive
 
-## 🎯 Цель работы
+## 🎯 Выполнение задания
 
-Целью данной домашней работы было:
-1. Развернуть экосистему **Hadoop + YARN + Hive** в контейнере Docker.  
-2. Создать базу данных в Hive и загрузить туда CSV-датасет с движением цен акций.  
-3. С помощью SQL-операторов (**WHERE, COUNT, GROUP BY, HAVING, ORDER BY, JOIN, UNION, WINDOW**) построить 5–6 аналитических витрин.  
-4. Для каждой витрины добавить текстовое описание и вывод.
+### 1. Выбор открытого набора данных (5 баллов) ✅
 
----
+- **Датасет**: `all_stocks_5yr.csv` — данные о ценах акций за 5 лет
+- **Источник**: Открытый датасет с Kaggle (аналогичный примеру из задания)
+- **Формат**: CSV с колонками: date, open, high, low, close, volume, Name
+- **Расположение**: `data/all_stocks_5yr.csv`
 
-## 🧩 Используемые технологии
+### 2. Создание базы данных и загрузка таблиц (5 баллов) ✅
 
-- **Ubuntu 22.04**
-- **Hadoop 3.2.1**
-- **Hive 3.1.3**
-- **Java 11**
-- **Docker + Docker Compose**
-- **Beeline CLI**
+- **База данных**: `stocks_hw`
+- **Таблицы**:
+  - `stg_prices_csv` — внешняя staging таблица для CSV
+  - `stocks_raw` — основная таблица с данными
+- **SQL скрипт**: `data/load_data.sql` — создание БД, таблиц и загрузка данных
+
+### 3. Построение аналитических витрин (5 баллов) ✅
+
+Создано **6 витрин** с использованием всех требуемых конструкций:
+
+| №   | Название витрины             | Используемые конструкции                                        | Описание                                                 |
+| --- | ---------------------------- | --------------------------------------------------------------- | -------------------------------------------------------- |
+| 1   | **avg_close_per_company**    | `WHERE`, `GROUP BY`, `AVG`, `COUNT`, `ORDER BY`                 | Средняя цена закрытия для каждой компании за весь период |
+| 2   | **max_volume_day**           | `WINDOW` (ROW_NUMBER), `PARTITION BY`, `ORDER BY`, `WHERE`      | День с максимальным объёмом торгов по каждой компании    |
+| 3   | **quarterly_growth**         | `WINDOW` (LAG), `PARTITION BY`, `ORDER BY`, `GROUP BY`, `WHERE` | Квартальная динамика роста/падения цен закрытия          |
+| 4   | **top5_by_volume**           | `GROUP BY`, `HAVING`, `AVG`, `COUNT`, `ORDER BY`                | ТОП-5 компаний по среднему дневному объёму торгов        |
+| 5   | **volatility_comparison**    | `UNION ALL`, `GROUP BY`, `HAVING`, `STDDEV`, `WHERE`            | Сравнение акций с высокой и низкой волатильностью        |
+| 6   | **monthly_summary_with_avg** | `GROUP BY`, `JOIN`, `WHERE`, `COUNT`, `ORDER BY`                | Месячная статистика с сравнением общих средних значений  |
+
+**Все требуемые конструкции использованы**:
+
+- ✅ WHERE
+- ✅ COUNT
+- ✅ GROUP BY
+- ✅ HAVING
+- ✅ ORDER BY
+- ✅ JOIN
+- ✅ UNION (UNION ALL)
+- ✅ WINDOW (ROW_NUMBER, LAG, PARTITION BY)
+
+### 4. Описания витрин (5 баллов) ✅
+
+К каждой витрине добавлено описание с 7 тезисами, объясняющими использование конструкций и назначение витрины. Описания находятся в файле `data/data_marts.sql` в виде комментариев перед каждой витриной.
 
 ---
 
@@ -26,240 +51,240 @@
 
 ```
 HW2/
-├── Dockerfile                  # Образ с Ubuntu, Hadoop и Hive
-├── docker-compose.yml          # Контейнер master (HDFS + YARN + Hive)
+├── Dockerfile                  # Docker образ с Hadoop и Hive
+├── docker-compose.yml          # Конфигурация Docker контейнера
+├── entrypoint.sh               # Скрипт запуска сервисов Hadoop и Hive
+├── setup_hive.sh               # Скрипт автоматической загрузки данных и создания витрин
 ├── conf/                       # Конфигурационные файлы Hadoop/Hive
 │   ├── core-site.xml
 │   ├── hdfs-site.xml
 │   ├── yarn-site.xml
 │   ├── mapred-site.xml
 │   ├── hive-site.xml
-│   └── hadoop-env.sh
-├── entrypoint.sh               # Скрипт запуска сервисов Hadoop и Hive
+│   ├── hadoop-env.sh
+│   └── hive-env.sh
 ├── data/
-│   └── stocks.csv              # Исходный CSV с данными по акциям
+│   ├── all_stocks_5yr.csv      # Исходный CSV с данными по акциям (5 лет)
+│   ├── load_data.sql           # SQL скрипт создания БД, таблиц и загрузки данных
+│   └── data_marts.sql          # SQL скрипт создания аналитических витрин (6 витрин)
 └── README.md                   # Описание проекта (текущий файл)
 ```
 
 ---
 
-## 🚀 Этапы выполнения
+## 🚀 Запуск в Docker контейнере
 
-### 1. Развёртывание Hadoop + Hive
+Все компоненты (Hadoop, Hive) запускаются внутри Docker контейнера для удобства развертывания.
 
-Собран Docker-образ на базе Ubuntu 22.04.  
-В нём установлены Java 11, Hadoop 3.2.1 и Hive 3.1.3.  
-Открыты порты:
+### Шаг 1: Запуск Docker контейнера
 
-| Компонент | Порт | Назначение |
-|------------|------|------------|
-| HDFS | 9870 | Веб-интерфейс |
-| YARN | 8088 | Веб-интерфейс |
-| Hive Metastore | 9083 | Сервис метаданных |
-| HiveServer2 | 10000 | JDBC-доступ через Beeline |
-
-В `entrypoint.sh` при старте контейнера автоматически поднимаются:
 ```bash
-start-dfs.sh
-start-yarn.sh
-hive --service metastore -p 9083 &
-hiveserver2 --hiveconf hive.metastore.uris=thrift://localhost:9083 &
+docker-compose up -d
 ```
 
----
-
-### 2. Проверка кластера Hadoop
+### Шаг 2: Ожидание запуска сервисов (30-60 секунд)
 
 ```bash
 docker exec -it hadoop-hw2 bash
+# Проверить процессы
 jps
 # Ожидаемые процессы: NameNode, DataNode, ResourceManager, NodeManager
-
-hdfs dfs -ls /
-hdfs dfs -mkdir -p /user/hive/warehouse /tmp/hive
-hdfs dfs -chmod -R 1777 /tmp /tmp/hive
-hdfs dfs -chmod -R 771  /user/hive/warehouse
 ```
 
----
+### Шаг 3: Загрузка данных и создание витрин
 
-### 3. Настройка Hive Metastore
+В контейнере выполните:
 
-Hive использует встроенную базу **Apache Derby**.  
-Инициализация выполнялась командой:
 ```bash
-schematool -dbType derby -initSchema -verbose
+bash /data/setup_hive.sh
 ```
 
-При несовместимости библиотек `guava` был удалён конфликтный файл:
-```bash
-mv /opt/hive/lib/guava-19.0.jar /opt/hive/lib/guava-19.0.jar.bak
-```
+Скрипт автоматически:
 
-После этого метастор и HiveServer2 запустились корректно:
-```bash
-nohup hive --service metastore -p 9083 >/opt/hive/log.metastore 2>&1 &
-nohup hiveserver2 --hiveconf hive.metastore.uris=thrift://localhost:9083 >/opt/hive/log.hiveserver2 2>&1 &
-```
+1. Создает директории в HDFS
+2. Загружает CSV файл в HDFS
+3. Выполняет SQL скрипты для создания таблиц и витрин
 
----
-
-### 4. Подключение через Beeline
+### Шаг 4: Проверка результатов
 
 ```bash
+# Подключение к Hive через Beeline
 beeline -u "jdbc:hive2://localhost:10000" -n root -p ""
+
+# В Beeline:
+USE stocks_hw;
+SHOW TABLES;
+
+# Просмотр данных витрин
+SELECT * FROM avg_close_per_company LIMIT 10;
+SELECT * FROM max_volume_day LIMIT 10;
+SELECT * FROM quarterly_growth LIMIT 10;
+SELECT * FROM top5_by_volume;
+SELECT * FROM volatility_comparison LIMIT 20;
+SELECT * FROM monthly_summary_with_avg LIMIT 10;
 ```
 
----
+### Альтернативный способ: Ручная загрузка данных
 
-### 5. Создание базы и загрузка данных
+Если автоматический скрипт не работает, можно выполнить вручную:
 
-```sql
-CREATE DATABASE IF NOT EXISTS stocks_db;
-USE stocks_db;
+```bash
+# В контейнере
+# 1. Загрузка CSV в HDFS
+hdfs dfs -mkdir -p /data/stocks_hw/stg_prices_csv
+hdfs dfs -put /data/all_stocks_5yr.csv /data/stocks_hw/stg_prices_csv/
 
-CREATE EXTERNAL TABLE stocks_raw (
-    date STRING,
-    open FLOAT,
-    high FLOAT,
-    low FLOAT,
-    close FLOAT,
-    volume BIGINT,
-    name STRING
-)
-ROW FORMAT DELIMITED
-FIELDS TERMINATED BY ','
-STORED AS TEXTFILE
-LOCATION '/data/stocks';
+# 2. Выполнение SQL скриптов через Beeline
+beeline -u "jdbc:hive2://localhost:10000" -n root -p "" -f /data/load_data.sql
+beeline -u "jdbc:hive2://localhost:10000" -n root -p "" -f /data/data_marts.sql
 ```
 
----
-
-## 📊 Построенные аналитические витрины
-
-| № | Название витрины | Используемые конструкции | Описание |
-|---|------------------|--------------------------|-----------|
-| 1 | **avg_close_per_company** | `GROUP BY`, `AVG`, `ORDER BY` | Средняя цена закрытия для каждой компании. |
-| 2 | **max_volume_day** | `ORDER BY`, `LIMIT`, `GROUP BY` | День с максимальным объёмом торгов по каждой компании. |
-| 3 | **quarterly_growth** | `WINDOW`, `LAG`, `PARTITION BY` | Рост или падение цены закрытия по кварталам. |
-| 4 | **top5_by_volume** | `GROUP BY`, `HAVING` | ТОП-5 компаний по среднему дневному объёму торгов. |
-| 5 | **high_vs_low_volatility** | `UNION`, `JOIN` | Сравнение акций с высокой и низкой волатильностью. |
-| 6 | **monthly_summary** | `GROUP BY`, `MONTH(date)` | Средняя и медианная цена закрытия за месяц. |
-
----
-
-## 📈 Примеры SQL-запросов
-
-### 1. Средняя цена закрытия
-```sql
-CREATE TABLE avg_close_per_company AS
-SELECT
-  name,
-  ROUND(AVG(close), 2) AS avg_close
-FROM stocks_raw
-WHERE close IS NOT NULL
-GROUP BY name
-ORDER BY avg_close DESC;
-```
-
-### 2. День с максимальным объёмом торгов
-```sql
-CREATE TABLE max_volume_day AS
-SELECT
-  name,
-  date,
-  volume
-FROM (
-  SELECT *,
-         ROW_NUMBER() OVER (PARTITION BY name ORDER BY volume DESC) AS rn
-  FROM stocks_raw
-) t
-WHERE rn = 1;
-```
-
-### 3. Динамика изменения цены (окно)
-```sql
-CREATE TABLE quarterly_growth AS
-SELECT
-  name,
-  date,
-  close,
-  LAG(close, 1) OVER (PARTITION BY name ORDER BY date) AS prev_close,
-  ROUND(
-    ((close - LAG(close, 1) OVER (PARTITION BY name ORDER BY date))
-     / LAG(close, 1) OVER (PARTITION BY name ORDER BY date)) * 100, 2
-  ) AS growth_pct
-FROM stocks_raw
-WHERE close IS NOT NULL;
-```
-
-### 4. ТОП-5 компаний по объёму торгов
-```sql
-CREATE TABLE top5_by_volume AS
-SELECT
-  name,
-  ROUND(AVG(volume), 0) AS avg_volume
-FROM stocks_raw
-GROUP BY name
-HAVING AVG(volume) IS NOT NULL
-ORDER BY avg_volume DESC
-LIMIT 5;
-```
-
-### 5. Высокая vs низкая волатильность
-```sql
-CREATE TABLE volatility_union AS
-SELECT name, 'HIGH' AS vol_type, stddev(close) AS volatility
-FROM stocks_raw
-GROUP BY name
-HAVING stddev(close) > 5
-UNION ALL
-SELECT name, 'LOW' AS vol_type, stddev(close) AS volatility
-FROM stocks_raw
-GROUP BY name
-HAVING stddev(close) <= 5;
-```
-
-### 6. Месячная статистика
-```sql
-CREATE TABLE monthly_summary AS
-SELECT
-  name,
-  substr(date, 1, 7) AS month,
-  ROUND(AVG(close), 2) AS avg_close,
-  MAX(close) AS max_close,
-  MIN(close) AS min_close
-FROM stocks_raw
-GROUP BY name, substr(date, 1, 7)
-ORDER BY name, month;
-```
-
----
-
-## 🧾 Итоговые результаты
-
-✅ Hadoop и Hive успешно развёрнуты в Docker.  
-✅ HDFS, YARN, Metastore и HiveServer2 функционируют корректно.  
-✅ Датасет успешно загружен в Hive.  
-✅ Построено 6 витрин, каждая демонстрирует разные SQL-возможности.  
-✅ Все запросы выполняются через Beeline без ошибок.
-
----
-
-## 🛠 Полезные команды
+### Полезные команды
 
 ```bash
 # Проверка HDFS
 hdfs dfs -ls /
+hdfs dfs -ls /data/stocks_hw
 
 # Просмотр логов Hive
 tail -n 50 /opt/hive/log.metastore
 tail -n 50 /opt/hive/log.hiveserver2
 
-# Подключение к Hive
-beeline -u "jdbc:hive2://localhost:10000" -n root -p ""
+# Веб-интерфейсы (доступны с хоста):
+# HDFS: http://localhost:9870
+# YARN: http://localhost:28088
 ```
 
+---
+
+## 📈 Описание аналитических витрин
+
+### 1. avg_close_per_company — Средняя цена закрытия по компаниям
+
+**Используемые конструкции**: `WHERE`, `GROUP BY`, `AVG`, `COUNT`, `ORDER BY`
+
+**Описание**: Витрина демонстрирует среднюю цену закрытия акций для каждой компании за весь анализируемый период. Позволяет сравнить средний уровень цен между различными компаниями и выявить наиболее дорогие и дешевые акции.
+
+**Тезисы**:
+
+1. Рассчитывается средняя цена закрытия (AVG(close)) для каждой компании
+2. Используется фильтрация WHERE для исключения записей с NULL значениями
+3. Группировка по названию компании (GROUP BY name) для агрегации данных
+4. Результаты сортируются по убыванию средней цены (ORDER BY DESC)
+5. Витрина помогает инвесторам быстро оценить средний уровень цен акций
+6. Может использоваться для сравнения относительной стоимости акций
+7. Позволяет выявить компании с наиболее стабильными ценами
+
+---
+
+### 2. max_volume_day — День с максимальным объемом торгов
+
+**Используемые конструкции**: `WINDOW` (ROW_NUMBER), `PARTITION BY`, `ORDER BY`, `WHERE`
+
+**Описание**: Витрина определяет день с максимальным объемом торгов для каждой компании. Это позволяет выявить пики торговой активности и связать их с конкретными датами, что может быть полезно для анализа событий, вызвавших повышенный интерес к акциям.
+
+**Тезисы**:
+
+1. Используется оконная функция ROW_NUMBER() для ранжирования записей
+2. PARTITION BY name обеспечивает независимое ранжирование для каждой компании
+3. ORDER BY volume DESC сортирует записи по убыванию объема торгов
+4. Фильтр WHERE rn = 1 выбирает только записи с максимальным объемом
+5. Витрина помогает выявить дни с аномально высокой торговой активностью
+6. Может использоваться для анализа корреляции между событиями и объемом торгов
+7. Позволяет идентифицировать компании с наиболее волатильными торговыми днями
+
+---
+
+### 3. quarterly_growth — Квартальная динамика роста цен
+
+**Используемые конструкции**: `WINDOW` (LAG), `PARTITION BY`, `ORDER BY`, `GROUP BY`, `WHERE`
+
+**Описание**: Витрина демонстрирует динамику изменения цены закрытия по кварталам для каждой компании. Используя оконные функции, рассчитывается процентное изменение цены относительно предыдущего квартала, что позволяет отслеживать тренды роста или падения.
+
+**Тезисы**:
+
+1. Используется оконная функция LAG() для получения значения предыдущего периода
+2. PARTITION BY name обеспечивает расчеты в рамках каждой компании
+3. ORDER BY date гарантирует правильную последовательность временных рядов
+4. Рассчитывается процентное изменение цены между кварталами
+5. Витрина помогает выявить сезонные паттерны и тренды роста/падения
+6. Может использоваться для прогнозирования будущей динамики цен
+7. Позволяет сравнивать квартальную производительность различных компаний
+
+---
+
+### 4. top5_by_volume — ТОП-5 компаний по объему торгов
+
+**Используемые конструкции**: `GROUP BY`, `HAVING`, `AVG`, `COUNT`, `ORDER BY`
+
+**Описание**: Витрина определяет пять компаний с наибольшим средним дневным объемом торгов. Используется HAVING для фильтрации результатов после агрегации, что позволяет исключить компании с недостаточным количеством данных или аномальными значениями.
+
+**Тезисы**:
+
+1. Используется GROUP BY для агрегации данных по компаниям
+2. HAVING применяется для фильтрации после агрегации (исключение NULL и малых объемов)
+3. COUNT(\*) используется для проверки достаточности данных по каждой компании
+4. ORDER BY avg_volume DESC сортирует компании по убыванию среднего объема
+5. LIMIT 5 ограничивает результат пятью компаниями
+6. Витрина помогает выявить наиболее ликвидные акции на рынке
+7. Может использоваться для анализа инвестиционной привлекательности компаний
+
+---
+
+### 5. volatility_comparison — Сравнение волатильности
+
+**Используемые конструкции**: `UNION ALL`, `GROUP BY`, `HAVING`, `STDDEV`, `WHERE`
+
+**Описание**: Витрина объединяет данные о компаниях с высокой и низкой волатильностью цен, используя UNION ALL. Волатильность рассчитывается как стандартное отклонение цен закрытия. Это позволяет разделить компании на две категории для сравнительного анализа.
+
+**Тезисы**:
+
+1. Используется UNION ALL для объединения двух наборов данных
+2. STDDEV(close) рассчитывает стандартное отклонение как меру волатильности
+3. HAVING применяется для разделения компаний на категории по уровню волатильности
+4. Первый SELECT выбирает компании с высокой волатильностью (> порогового значения)
+5. Второй SELECT выбирает компании с низкой волатильностью (<= порогового значения)
+6. Витрина помогает инвесторам выбрать акции в соответствии с их риск-профилем
+7. Может использоваться для построения диверсифицированного портфеля
+
+---
+
+### 6. monthly_summary_with_avg — Месячная статистика с JOIN
+
+**Используемые конструкции**: `GROUP BY`, `JOIN`, `WHERE`, `COUNT`, `ORDER BY`
+
+**Описание**: Витрина создает месячную статистику по ценам закрытия и объему торгов, а затем использует JOIN для объединения с данными о средних ценах по компаниям. Это позволяет сравнивать месячные показатели с общими средними значениями.
+
+**Тезисы**:
+
+1. Используется GROUP BY для агрегации данных по компании и месяцу
+2. SUBSTR(date, 1, 7) извлекает год и месяц из даты для группировки
+3. JOIN объединяет месячную статистику с общими средними показателями
+4. WHERE используется для фильтрации данных перед агрегацией
+5. COUNT(\*) подсчитывает количество торговых дней в каждом месяце
+6. Витрина помогает выявить сезонные паттерны в торговле акциями
+7. Позволяет сравнивать месячные показатели с долгосрочными средними значениями
+
+---
+
+## 🧾 Итоговые результаты
+
+✅ Выбран открытый датасет с Kaggle  
+✅ Создана база данных `stocks_hw` в Hive  
+✅ Данные успешно загружены в таблицы  
+✅ Построено 6 аналитических витрин  
+✅ Использованы все требуемые SQL конструкции (WHERE, COUNT, GROUP BY, HAVING, ORDER BY, JOIN, UNION, WINDOW)  
+✅ К каждой витрине добавлено описание с 7 тезисами
+
+**Полные SQL-запросы находятся в файле `data/data_marts.sql`**
+
+---
+
+## 📝 Использование
+
+Все команды выполняются внутри Docker контейнера. См. раздел "🚀 Запуск в Docker контейнере" выше.
+
+---
 
 ## ✍️ Автор
 

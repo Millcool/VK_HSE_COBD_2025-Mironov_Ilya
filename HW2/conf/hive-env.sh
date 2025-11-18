@@ -1,3 +1,6 @@
-export HADOOP_OPTS="$HADOOP_OPTS -Djdk.module.illegalAccess=permit --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
+#!/usr/bin/env bash
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export HADOOP_HOME=/opt/hadoop
+export HIVE_HOME=/opt/hive
+export HIVE_CONF_DIR=/opt/hive/conf
 
-export HIVE_OPTS="$HIVE_OPTS -Djdk.module.illegalAccess=permit --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"

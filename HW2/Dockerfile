@@ -60,3 +60,4 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 8020 9870 9864 9866 9867 9868 8033 8088 9083 10000
 
 ENTRYPOINT ["/entrypoint.sh"]
+
